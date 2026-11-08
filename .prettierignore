@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+ios/
+android/
+package-lock.json
+expo-env.d.ts
+assets/
+
+# Files owned by other tools or the user
+AGENTS.md
+LICENSE
+.claude/
+.vscode/
+context/

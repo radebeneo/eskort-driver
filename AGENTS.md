@@ -1,5 +1,21 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Application Building Context
+
+This project follows the six-file context methodology. Read these files at the start of every session, before planning or changing code:
+
+1. `context/project-overview.md` — what the app does, the core driver flow, and what is in and out of scope.
+2. `context/architecture.md` — stack, system boundaries, data flow, storage, auth/RLS, the Google Maps proxy contract and invariants.
+3. `context/code-standards.md` — TypeScript, Expo, state, services, error handling, styling, accessibility and testing conventions.
+4. `context/ai-workflow-rules.md` — how to scope work, protected files, actions that need user consent, and the checklist before moving on.
+5. `context/ui-context.md` — design tokens, components, layout patterns and copy.
+6. `context/progress-tracker.md` — current phase, completed work, next steps, open questions and architecture decisions.
+
+- Implement against these files. Do not invent product behaviour; if something is missing or ambiguous, record it under **Open Questions** in `context/progress-tracker.md` and ask.
+- Do not build anything listed as out of scope in `context/project-overview.md`.
+- Keep the context files in sync with the code, and update `context/progress-tracker.md` after every meaningful change.
+- `context/README.md` is the methodology guide, not a context file.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
