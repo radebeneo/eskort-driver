@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useDeliverySelectionStore } from '@/stores/delivery-selection-store';
 import {
   DEFAULT_TRACKING_PREFERENCES,
@@ -19,7 +21,12 @@ describe('useDeliverySelectionStore', () => {
 });
 
 describe('useTrackingPreferencesStore', () => {
-  beforeEach(() => useTrackingPreferencesStore.getState().resetPreferences());
+  beforeEach(async () => {
+    // Isolate storage and finish hydration so it cannot overwrite setter results mid-test.
+    await AsyncStorage.clear();
+    await useTrackingPreferencesStore.persist.rehydrate();
+    useTrackingPreferencesStore.getState().resetPreferences();
+  });
 
   const preferences = () => {
     const { highAccuracy, distanceIntervalMeters } = useTrackingPreferencesStore.getState();

@@ -58,7 +58,7 @@ route file (src/app) → feature screen → feature hook → useServices() → s
   - `status` ∈ `assigned | picked_up | en_route | delivered | failed | cancelled`
 - **Supabase Auth**: driver identities and sessions.
 - **SecureStore (device)**: the Supabase session, split into 1024-character chunks plus a `.chunks` count key, `AFTER_FIRST_UNLOCK` accessibility. AsyncStorage on web.
-- **AsyncStorage (device)**: persisted Zustand tracking preferences.
+- **AsyncStorage (device)**: persisted Zustand tracking preferences (key `eskort-driver.tracking-preferences`, version 1). Stored state is untrusted: a custom `persist` `merge` reads only `highAccuracy` (boolean) and `distanceIntervalMeters` (finite number, rounded and clamped to 5–500). Missing or invalid fields fall back to the defaults. Other stored keys, including action names, are ignored. A missing value or a version mismatch keeps the defaults.
 - **In memory only**: delivery lists and details (reloaded through repositories; repositories do not cache beyond one call), the selected delivery ID, route estimates.
 - **Supabase Edge Function secrets**: the Google Maps API key.
 - **Never on the device**: Supabase secret/service-role key, Google Maps key, copies of Supabase data in Zustand.
@@ -71,6 +71,9 @@ route file (src/app) → feature screen → feature hook → useServices() → s
 - Sign-out clears the session and resets client operational stores (selected delivery).
 - **Access control is Supabase Row Level Security.** A driver may read only their own `drivers` row and deliveries (and items) whose `driver_id` matches that row, and may update status only on those deliveries. `Stack.Protected` route guards are UX, not security.
 - The Google Maps Edge Function must verify the caller's JWT before calling Google.
+- Session restoration is revision-guarded: a pending restoration result
+  cannot replace a newer authentication event, completed sign-in, or
+  explicit sign-out.
 
 ## Google Maps Proxy Contract
 

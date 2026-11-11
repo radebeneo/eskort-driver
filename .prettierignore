@@ -15,3 +15,12 @@ LICENSE
 .claude/
 .vscode/
 context/
+
+# Never format local environment files or credential material.
+.env*
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.mobileprovision

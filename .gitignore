@@ -31,11 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files (only .env.example is committed)
-.env
-.env.development
-.env.preview
-.env.production
-.env*.local
+.env*
+!.env.example
 
 # test coverage
 coverage/

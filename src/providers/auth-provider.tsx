@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -58,12 +59,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [driverEntry, setDriverEntry] = useState<DriverProfileEntry | null>(null);
   const [driverReloadToken, setDriverReloadToken] = useState(0);
 
-  // Restore the persisted session, then follow sign-in, sign-out and refresh events.
+  // A restoration result must not override a newer authentication action.
+  const authRevision = useRef(0);
+
+  // Restore the persisted session, then follow authentication events.
   useEffect(() => {
     let active = true;
+    const restoreRevision = authRevision.current;
+
     const unsubscribe = auth.onSessionChange((next) => {
       if (!active) return;
+
+      authRevision.current += 1;
       setSession(next);
+
       if (!next) clearOperationalState();
     });
 
@@ -71,10 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .restoreSession()
       .then(
         (restored) => {
-          if (active) setSession((current) => current ?? restored);
+          if (!active || authRevision.current !== restoreRevision) return;
+
+          setSession((current) => current ?? restored);
         },
         () => {
-          // A failed restore is treated as signed out.
+          // A failed restore does not replace newer authentication state.
+          // Without a newer action, the initial state remains signed out.
         },
       )
       .finally(() => {
@@ -150,12 +162,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (email: string, password: string) => {
       const next = await auth.signInWithPassword(email, password);
+
+      authRevision.current += 1;
       setSession(next);
     },
     [auth],
   );
 
   const signOut = useCallback(async () => {
+    // Invalidate pending restoration immediately, even if the service
+    // does not emit a sign-out event.
+    authRevision.current += 1;
+
     try {
       await auth.signOut();
     } finally {
