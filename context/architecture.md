@@ -25,7 +25,7 @@
 - `src/features/<feature>/` — Feature screens, feature hooks and feature-only components and helpers. Features: `auth`, `deliveries`, `location`, `navigation`. Features call services only through hooks that use `useServices()`.
 - `src/components/ui/` — The design system: theme tokens, `useTheme`, `Text`, `Button`, `Card`, `TextField`, `Screen`, `InfoRow`, `SwitchRow`. No feature knowledge.
 - `src/components/states/` — Reusable loading, empty, error and permission-denied states.
-- `src/components/` (root) — App-wide components that are not primitives: `config-error-screen`, `mock-mode-banner`, `header-link-button`.
+- `src/components/` (root) — App-wide components that are not primitives: `config-error-screen`, `mock-mode-banner`, `mock-mode-screen-layout`, `header-link-button`.
 - `src/providers/` — `ServicesProvider`, `AuthProvider`, `AppProviders` (composition). The only React Context providers in the app.
 - `src/stores/` — Zustand stores for client operational state.
 - `src/services/` — Typed interfaces and implementations for every external integration (`auth`, `deliveries`, `drivers`, `maps`, `location`), Supabase error mapping, the `Services` type, and `createServices`.
@@ -102,7 +102,7 @@ Responses are validated by `src/services/maps/maps-parsers.ts`. The function is 
 2. Auth state (session, sign-in status, driver profile) lives only in `AuthProvider`. It is never duplicated in Zustand or any other store.
 3. Supabase is the source of truth for deliveries. Zustand stores hold IDs and device preferences, never copies of server records.
 4. No server secret is ever bundled: no Supabase secret/service-role key, no Google API key, no secret in `EXPO_PUBLIC_*`, `app.json` or `eas.json`. Google APIs are reached only through the Edge Function.
-5. Mock implementations live only in `src/services/mocks/`, are selected only in `createServices`, are refused when `EXPO_PUBLIC_APP_ENV=production`, and are always visible to the user through `MockModeBanner`.
+5. Mock implementations live only in `src/services/mocks/`, are selected only in `createServices`, are refused when `EXPO_PUBLIC_APP_ENV=production`, and are always visible to the user through `MockModeBanner`. The banner is rendered only by `MockModeScreenLayout`, the `screenLayout` of the `(auth)` and `(app)` stacks, so it appears exactly once above every screen and state. Screens and states must not render it themselves.
 6. Every response from Supabase or the Edge Function is validated by a mapper or parser before it becomes a domain type.
 7. Client route guards are not access control. Every data rule must also be enforced by RLS or the Edge Function.
 8. `ios/` and `android/` are never created or edited by hand. Native behaviour is configured in `app.json` and config plugins.

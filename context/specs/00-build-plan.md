@@ -144,6 +144,7 @@ Historical, user-supplied local results:
 Checks run by the agent on 2026-11-11:
 - Baseline `npm run validate`: passed, 57 tests across 11 suites.
 - After Unit 04: `npm run validate` passed, 94 tests across 12 suites.
+- After Unit 05: `npm run validate` passed, 124 tests across 14 suites.
 - Expo Doctor not re-run (no dependency or native configuration changes).
 
 Not verified:

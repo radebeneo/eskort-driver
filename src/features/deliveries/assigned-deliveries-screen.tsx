@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet } from 'react-native';
 
-import { MockModeBanner } from '@/components/mock-mode-banner';
 import { EmptyState, ErrorState, LoadingState } from '@/components/states';
 import { Screen, Text, useTheme } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
@@ -55,14 +54,11 @@ function AssignedDeliveriesList({ driverId }: { driverId: string }) {
           />
         }
         ListHeaderComponent={
-          <View style={{ gap: spacing.md }}>
-            <MockModeBanner />
-            {state.status === 'error' ? (
-              <Text tone="danger" accessibilityRole="alert">
-                {state.error.message}
-              </Text>
-            ) : null}
-          </View>
+          state.status === 'error' ? (
+            <Text tone="danger" accessibilityRole="alert">
+              {state.error.message}
+            </Text>
+          ) : undefined
         }
         ListEmptyComponent={
           <EmptyState

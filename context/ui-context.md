@@ -87,7 +87,7 @@ Reusable states in `src/components/states/` (`@/components/states`):
 - `ErrorState` — Shows an `AppError` message with a retry action; announced as an alert.
 - `PermissionDeniedState` — Explains why a permission is needed; offers **ask again** when possible, otherwise **open settings**.
 
-App-wide components: `MockModeBanner` (warning-toned banner shown in mock mode), `ConfigErrorScreen`, `HeaderLinkButton`.
+App-wide components: `MockModeBanner` (warning-toned banner shown in mock mode), `MockModeScreenLayout` (navigator `screenLayout` that places the banner once above every screen; `headerless` for stacks without a header), `ConfigErrorScreen`, `HeaderLinkButton`.
 
 ## Layout Patterns
 
@@ -100,7 +100,7 @@ App-wide components: `MockModeBanner` (warning-toned banner shown in mock mode),
   - Route section: estimate or permission state, plus **Open in Google Maps**.
   - Items card: `quantity × name` lines, or a muted empty message.
 - **Forms**: single column, labelled fields, inline field errors, form-level error above the submit button, submit button full width.
-- **Mock mode**: `MockModeBanner` is always visible in mock mode and must not be hidden.
+- **Mock mode**: `MockModeBanner` is always visible in mock mode and must not be hidden. It is placed once per screen by `MockModeScreenLayout` in `src/app/(auth)/_layout.tsx` and `src/app/(app)/_layout.tsx`: fixed directly below the native header in `(app)`, and at the top of the screen (clearing the status bar) in the headerless `(auth)` stack. It sits outside each screen's scroll view or list, so it does not scroll away and does not affect pull-to-refresh or keyboard avoidance. It covers loading, empty, inactive-account and error states. It renders nothing in live mode. Do not add the banner inside screens or states.
 - **Status badges**: pill radius, colour from the status tone mapping in `src/features/deliveries/delivery-status.ts`; always include the text label, never colour alone.
 
 ## Icons

@@ -4,7 +4,10 @@ import { Text } from '@/components/ui/text';
 import { useTheme } from '@/components/ui/use-theme';
 import { useServices } from '@/providers/services-provider';
 
-/** Visible marker that the app is running on mock services (EXPO_PUBLIC_USE_MOCKS=true). */
+/**
+ * Visible marker that the app is running on mock services (EXPO_PUBLIC_USE_MOCKS=true).
+ * Rendered by `MockModeScreenLayout` in the route-group layouts; do not add it to screens.
+ */
 export function MockModeBanner() {
   const { mode } = useServices();
   const { colors, radii, spacing } = useTheme();

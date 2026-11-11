@@ -6,12 +6,13 @@ Update this file after every meaningful implementation change.
 
 - Phase 1 — Standalone delivery system (units in `context/specs/00-build-plan.md`).
 - Unit 04 — Persisted preference validation: completed 2026-11-11.
+- Unit 05 — Mock-mode visibility: completed 2026-11-11.
 - Unit 02 — Scope and contracts: pending operational decisions.
 - Next unit not started; confirm with the user.
 
 ## Current Goal
 
-- Confirm the next unit with the user (build plan order suggests Unit 05 — Mock-mode visibility).
+- Confirm the next unit with the user. Unit 02 — Scope and contracts is next in the build plan but is blocked on the operational rules under **Open Questions**.
 - Keep Unit 02 scope and contracts pending until the operational rules are approved.
 
 ## Completed
@@ -43,6 +44,16 @@ Update this file after every meaningful implementation change.
   - Verified 2026-11-11 (this session): `npm run validate` passed, 94 tests in 12 suites.
   - Not run: Expo Doctor (blocked; no dependency or native changes), device runs.
   - Zustand behaviour: a stored version other than 1 with no `migrate` logs a console error and keeps the defaults.
+- **Unit 05 — Mock-mode visibility** (2026-11-11)
+  - Before: the banner rendered only on sign-in and in the ready-state list header of Assigned deliveries, where it scrolled away. Delivery details, profile and the loading, empty, inactive-account and error states had no banner.
+  - New `src/components/mock-mode-screen-layout.tsx`: a navigator `screenLayout` wrapper that renders `MockModeBanner` once above the screen in mock mode and returns the screen unchanged in live mode. A context guard prevents a second banner if layouts are nested.
+  - `src/app/(app)/_layout.tsx` and `src/app/(auth)/_layout.tsx` pass it as `screenLayout`. In `(app)` the banner sits directly below the native header; the headerless `(auth)` stack uses `headerless`, so the banner clears the status bar.
+  - Removed the duplicate placements from `sign-in-screen.tsx` and the list header in `assigned-deliveries-screen.tsx`. The list header still shows the refresh error message. The banner's accessible label is unchanged.
+  - The banner is outside each screen's `ScrollView`/`FlatList`, so list scrolling, pull-to-refresh and keyboard avoidance are unchanged. On sign-in, `KeyboardAvoidingView` is a direct sibling below the banner.
+  - Tests: `src/components/__tests__/mock-mode-screen-layout.test.tsx` (mock, headerless, live, nested) and `src/components/__tests__/mock-mode-routes.test.tsx`. The route test renders the real layouts and routes with `renderRouter` and checks exactly one banner in mock mode and none in live mode for 13 states across sign-in, assigned deliveries, delivery details and profile.
+  - Jest config: added `standard-navigation` (an ESM-only `expo-router` dependency) to `transformIgnorePatterns` in `package.json`, so router tests can load. No dependency changes.
+  - Verified 2026-11-11 (this session): `npm run validate` passed, 124 tests in 14 suites.
+  - Not run: Expo Doctor (blocked; no dependency or native changes), device or simulator runs. Visual placement under the native header, status-bar clearance and keyboard behaviour on a real device are not verified.
 
 ## In Progress
 
@@ -59,20 +70,20 @@ Update this file after every meaningful implementation change.
 - Historical (user-supplied): validation passed with 54 tests in 10 suites, later 57 tests in 11 suites.
 - This session (2026-11-11): baseline `npm run validate` passed, 57 tests in 11 suites.
   After Unit 04: `npm run validate` passed, 94 tests in 12 suites.
+  After Unit 05: `npm run validate` passed, 124 tests in 14 suites.
   Expo Doctor was not re-run; no dependencies or native configuration changed.
 
 ## Next Up
 
 Order follows `context/specs/00-build-plan.md`. Confirm each unit with the user before starting it.
 
-1. **Unit 05 — Mock-mode visibility.** No open question blocks it.
-2. **Unit 02 — Scope and contracts.** Blocked on the operational rules under **Open Questions**. `project-overview.md` and `architecture.md` must be updated before Units 06–14 start.
-3. **Unit 06 — Backend schema and authorization.** Needs Unit 02 and the backend questions answered.
-4. **Unit 07 — Live read-only integration.** Needs Unit 06 and a non-production Supabase project.
-5. **Units 08–11 — Status operations, PIN proof of delivery, offline reads, offline status queue.** Need the status, reason, PIN and offline answers.
-6. **Units 12–13 — Background location configuration, tracking lifecycle and uploads.** Need the tracking answers. Unit 12 requires a new development build.
-7. **Unit 14 — Google Routes integration.** Needs Google Cloud billing and APIs enabled; the user configures secrets and deploys the Edge Function.
-8. **Unit 15 — Device verification and handover.** Needs approved app identifiers, EAS ownership and consent for EAS commands.
+1. **Unit 02 — Scope and contracts.** Blocked on the operational rules under **Open Questions**. `project-overview.md` and `architecture.md` must be updated before Units 06–14 start.
+2. **Unit 06 — Backend schema and authorization.** Needs Unit 02 and the backend questions answered.
+3. **Unit 07 — Live read-only integration.** Needs Unit 06 and a non-production Supabase project.
+4. **Units 08–11 — Status operations, PIN proof of delivery, offline reads, offline status queue.** Need the status, reason, PIN and offline answers.
+5. **Units 12–13 — Background location configuration, tracking lifecycle and uploads.** Need the tracking answers. Unit 12 requires a new development build.
+6. **Unit 14 — Google Routes integration.** Needs Google Cloud billing and APIs enabled; the user configures secrets and deploys the Edge Function.
+7. **Unit 15 — Device verification and handover.** Needs approved app identifiers, EAS ownership and consent for EAS commands.
 
 Not yet in the build plan: applying approved Eskort brand tokens, icon and splash (waiting on brand assets).
 
@@ -131,6 +142,7 @@ Dropped: "where are proof-of-delivery files stored" no longer applies because PI
 - Run EAS as `npx eas-cli@latest <command>`, only with user consent.
 - `AGENTS.md` has an "Application Building Context" section that points at these six files (added 2026-11-08 at the user's request).
 - 2026-11-11: **Next Up** and **Open Questions** reconciled with `context/specs/00-build-plan.md` and the approved requirements, at the user's request. Documentation only; no decisions were added.
+- 2026-11-11: Unit 05 implemented at the user's request. The mock banner now lives only in the route-group `screenLayout` (`MockModeScreenLayout`); do not add it to screens. Router-level tests use `expo-router/testing-library`, which enables fake timers.
 
 ## Requirements Received — Standalone Delivery System
 

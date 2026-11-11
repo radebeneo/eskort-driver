@@ -2,7 +2,6 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import type { Edge } from 'react-native-safe-area-context';
 
-import { MockModeBanner } from '@/components/mock-mode-banner';
 import { Button, Screen, Text, TextField, useTheme } from '@/components/ui';
 import { toAppError } from '@/lib/errors';
 import { useAuth } from '@/providers/auth-provider';
@@ -43,7 +42,6 @@ export function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.flex}>
       <Screen scroll edges={ALL_EDGES} contentStyle={styles.content}>
-        <MockModeBanner />
         <View style={{ gap: spacing.xs }}>
           <Text variant="title">Driver sign-in</Text>
           <Text tone="muted">Sign in with the account provided by your dispatcher.</Text>

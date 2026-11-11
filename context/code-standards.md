@@ -88,6 +88,8 @@
 - Tests live in `__tests__/` folders next to the code, named `<subject>.test.ts(x)`.
 - Unit test pure logic: config parsing, mappers, parsers, validation, formatting, stores.
 - Component tests use mock services through `ServicesProvider` (`createMockServices`). Do not hit real Supabase or Google in tests.
+- Route-level tests render the real route and layout files with `renderRouter` from `expo-router/testing-library` (see `src/components/__tests__/mock-mode-routes.test.tsx`). `renderRouter` turns on fake timers; restore real timers in `afterEach`.
+- ESM-only packages loaded in Jest must be listed in `transformIgnorePatterns` in `package.json` (`standard-navigation` is required by `expo-router`).
 - Global mocks go in `jest.setup.js`.
 - A bug fix includes a test that fails without the fix where practical.
 
