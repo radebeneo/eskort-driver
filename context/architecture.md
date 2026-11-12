@@ -70,6 +70,7 @@ route file (src/app) → feature screen → feature hook → useServices() → s
 - After sign-in, `AuthProvider` loads the driver row for `auth.uid()` via the driver repository. The driver profile lives only in `AuthProvider`.
 - Sign-out clears the session and resets client operational stores (selected delivery).
 - **Access control is Supabase Row Level Security.** A driver may read only their own `drivers` row and deliveries (and items) whose `driver_id` matches that row, and may update status only on those deliveries. `Stack.Protected` route guards are UX, not security.
+- The current `updateStatus` repository method writes `deliveries.status` directly. It accepts any status, sends no reason, records no audit event and has no idempotency key; its only protection is the assumed RLS update policy. It is **not** a secure operational contract and must not be connected to UI or offline replay. **Planned Architecture** below describes the proposed replacement.
 - The Google Maps Edge Function must verify the caller's JWT before calling Google.
 - Session restoration is revision-guarded: a pending restoration result
   cannot replace a newer authentication event, completed sign-in, or
@@ -86,7 +87,7 @@ The Edge Function named by `EXPO_PUBLIC_GOOGLE_MAPS_FUNCTION` (default `google-m
 | `placesAutocomplete` | `input, sessionToken, near?`      | `{ suggestions: [{ placeId, primaryText, secondaryText }] }`                                 |
 | `placeDetails`       | `placeId, sessionToken`           | `{ placeId, formattedAddress, location: { latitude, longitude } }`                           |
 
-Responses are validated by `src/services/maps/maps-parsers.ts`. The function is not in this repo.
+Responses are validated by `src/services/maps/maps-parsers.ts`. The function is not in this repo, and the user has confirmed it does not exist yet, so live route estimates cannot succeed until it is deployed. This contract accepts client-supplied coordinates and free-text place queries; the planned contract (Unit 14) narrows it.
 
 ## Configuration Model
 
@@ -107,3 +108,51 @@ Responses are validated by `src/services/maps/maps-parsers.ts`. The function is 
 7. Client route guards are not access control. Every data rule must also be enforced by RLS or the Edge Function.
 8. `ios/` and `android/` are never created or edited by hand. Native behaviour is configured in `app.json` and config plugins.
 9. Location is foreground-only. Background location must not be added without a scope change in `project-overview.md` and new permission configuration.
+
+## Planned Architecture (Phase 1 — approved direction, not implemented)
+
+> Approved direction from `context/specs/02-operational-contract.md` (operational contract v1, approved 2026-11-12). The detailed backend design is in `context/specs/06-backend-schema-authorization.md`, which is **awaiting review**. Nothing in this section is implemented. The sections above describe the current implementation. The **Invariants** stay in force until the unit that changes one is implemented and updates this file.
+
+### Backend source and ownership
+
+- Backend source lives in `supabase/` in this repository: migrations, database functions, Edge Functions, synthetic seed data and backend tests (pgTAP).
+- Agents prepare and test changes locally. The user applies reviewed migrations and deploys functions. Every remote operation needs explicit approval.
+- Local backend tests need Docker and the Supabase CLI, which are not installed on the development machine (2026-11-12).
+
+### Data and authorization (Unit 06, proposal under review)
+
+- Schemas: `public` (read surface protected by RLS, plus driver operation functions), `app_private` (secrets, PIN verifiers, recipient email, notification outbox, idempotency records, rate limits, settings, integration clients, role memberships; not exposed by the Data API) and `app_admin` (audited administrator functions; not exposed).
+- Deny by default: Data API default privileges are revoked and every grant is explicit. No API role has `INSERT`, `UPDATE` or `DELETE` on any table. Drivers write only through operation functions.
+- Administrator authorization comes from a protected role-membership table, never from user-editable metadata. Supabase project collaborators are distinct from application administrators.
+- Deliveries gain `pending_assignment` (no driver), an assignment version, a current attempt ID, and package custody (`at_store`, `with_driver`, `with_recipient`) tracked separately from status. Attempts, delivery events and custody events are append-only.
+- Reason codes and their stage rules are server-managed reference data.
+- Driver location tables are created for Unit 13; no upload path exists until then.
+
+### Driver and administrator operations (Units 06, 08, 09)
+
+- Every driver action is an atomic `security definer` function with `search_path = ''`. It derives the driver from `auth.uid()`, checks the operation ID, attempt ID, assignment version and expected status, applies the transition, and writes the change and its audit event in one transaction. Business outcomes are returned as result codes, not raised, so counters and audit events commit.
+- Administrator operations are audited functions recording the actor, reason, timestamp and affected record. Post-collection reassignment is blocked unless a custody-transfer operation is built.
+
+### PIN and notifications (Units 06, 09; email sender later)
+
+- Six-digit PINs are generated server-side and stored only as an HMAC verifier whose key is held in Supabase Vault. No role, including administrators, can read the PIN or the verifier through the API.
+- A server-side notification function (deployed in a later unit) sends the PIN by transactional email. The database keeps a notification outbox with no PIN or email copy in it. Failures are visible to administrators and retryable.
+- Five incorrect attempts per PIN, counted atomically, plus a per-driver rate limit; 48-hour validity; online verification only.
+
+### Order-to-delivery integration (later unit)
+
+- An Edge Function authenticates the separate e-commerce application's server with a per-client credential and calls a database function that validates the payload and creates a `pending_assignment` delivery. Idempotent on (client, external order ID). Never accepts a driver, role, PIN or status.
+
+### Client (Units 07–13)
+
+- **Unit 07:** domain types, mappers and mocks gain `pending_assignment`, the new column names, the attempt ID, the assignment version and custody. Drivers never receive `pending_assignment` rows.
+- **Unit 08:** `DeliveryRepository.updateStatus(deliveryId, status)` is replaced by operation methods that send an operation ID, attempt ID, assignment version, expected status and, where required, a reason code and note.
+- **Unit 09:** PIN entry calls the completion operation online only. Raw PINs are never persisted on the device.
+- **Unit 10:** an encrypted caching wrapper around the uncached Supabase repository (preferably Expo SQLite with SQLCipher, keys in SecureStore), driver-scoped, 24-hour maximum age. Zustand never holds delivery records (Invariant 3 unchanged); it may hold IDs and sync-status flags.
+- **Unit 11:** a persisted, driver-scoped status queue (maximum 500) replayed in order per delivery. Location uploads use a separate bounded queue.
+- **Units 12–13:** a background location task registered outside React, using a shared, concurrency-safe auth/storage layer and no service-role key. Invariant 9 changes when Unit 12 is implemented.
+- **Sign-out:** with pending writes, offer "Sync first", "Stay signed in" or "Sign out and discard pending changes". Explicit sign-out stops tracking and clears caches and queues. Today it clears only the selected delivery.
+
+### Maps Edge Function (Unit 14)
+
+- Verifies the JWT, accepts delivery IDs and derives authorised destinations server-side, and enforces input limits, quotas, timeouts and safe errors. It is not an open proxy for arbitrary coordinates or place searches. The Places search UI is deferred.

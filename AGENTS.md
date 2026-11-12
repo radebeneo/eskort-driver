@@ -14,7 +14,6 @@ This project follows the six-file context methodology. Read these files at the s
 - Implement against these files. Do not invent product behaviour; if something is missing or ambiguous, record it under **Open Questions** in `context/progress-tracker.md` and ask.
 - Do not build anything listed as out of scope in `context/project-overview.md`.
 - Keep the context files in sync with the code, and update `context/progress-tracker.md` after every meaningful change.
-- `context/README.md` is the methodology guide, not a context file.
 
 ## Expo has changed — do not trust your training data
 

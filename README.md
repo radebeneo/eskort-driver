@@ -1,10 +1,39 @@
 # Eskort Driver
 
-Foundation for the Eskort e-commerce delivery-driver app (Android and iOS), built with Expo SDK 58, Expo Router and TypeScript.
+Driver app (Android and iOS) for a standalone Eskort delivery system, built with Expo SDK 58, Expo Router and TypeScript. Supabase is the source of truth for drivers and deliveries.
 
-This is a scaffold, not the finished app. It includes sign-in, assigned deliveries, delivery details and the driver profile. These run against clearly marked mock services or a real Supabase project.
+This is a foundation, not the finished system. Today it includes sign-in, assigned deliveries, delivery details and the driver profile. These run against clearly marked mock services or a real Supabase project.
+
+The approved Phase 1 plan extends it with a Supabase backend kept in this repository, controlled driver status operations, PIN proof of delivery, offline support and live tracking. A separate, small e-commerce application will later create deliveries through an authenticated endpoint; it is not part of this repository. See [Implemented and planned](#implemented-and-planned).
 
 > No official Eskort brand assets, colours or fonts are included. The design tokens in `src/components/ui/theme.ts` are neutral placeholders, to be replaced with approved brand tokens.
+
+## Implemented and planned
+
+### Implemented
+
+- Email and password sign-in through Supabase Auth, with the session kept in secure storage and restored on launch (kept when offline).
+- Assigned deliveries list (active statuses only) and delivery details, including **Call customer**.
+- Foreground location permission handling, route estimates through a Supabase Edge Function (the function does not exist yet, so live estimates cannot succeed until it is deployed), and a keyless Google Maps directions link.
+- Driver profile with data source and sign out. The **High-accuracy GPS** preference affects route estimates only.
+- Mock mode with an on-screen banner, refused in production. Startup configuration validation.
+
+### Planned (approved, not implemented)
+
+The rules are in `context/specs/02-operational-contract.md` (operational contract v1). Build order is in `context/specs/00-build-plan.md`.
+
+- Backend source in `supabase/`: schema, RLS, controlled functions and tests (Unit 06; specification awaiting review in `context/specs/06-backend-schema-authorization.md`).
+- Deliveries that exist before assignment (`pending_assignment`), administrator-controlled assignment, retries with new attempt IDs, and package custody tracked separately from status.
+- Controlled, atomic driver status operations with predefined reasons. These replace the current direct status write in the repository, which no screen uses.
+- PIN proof of delivery, with the PIN sent to the recipient by email from a server-side function and verified online by the server.
+- An encrypted offline cache (24 hours), a status queue (500 operations) and a separate location queue.
+- Live tracking after collection, viewable by administrators.
+- Google Routes through an authenticated Maps Edge Function that derives destinations from delivery IDs.
+- An authenticated, idempotent create-delivery endpoint for the separate e-commerce application.
+
+### Not planned for Phase 1
+
+Payments, inventory, fleet optimisation, customer-facing tracking, SMS, photo or signature proof, push notifications, password reset, an administrator app, in-app map rendering and Eskort branding (waiting on brand assets). Administration uses the Supabase Dashboard, runbooks and controlled database functions.
 
 ## Stack
 
@@ -13,7 +42,7 @@ This is a scaffold, not the finished app. It includes sign-in, assigned deliveri
 | Framework                     | Expo SDK 58, React Native 0.88, TypeScript (strict)                    |
 | Navigation                    | Expo Router (`src/app`), `Stack.Protected` auth guards                 |
 | Auth/session + driver profile | React Context (`src/providers/auth-provider.tsx`)                      |
-| Client operational state      | Zustand (`src/stores`): selected delivery, tracking preferences        |
+| Client operational state      | Zustand (`src/stores`): selected delivery, location preferences        |
 | Backend / delivery data       | Supabase (source of truth), behind typed repositories                  |
 | Location                      | `expo-location` (foreground, "when in use")                            |
 | Routing / distance / places   | Google APIs through a Supabase Edge Function proxy (no key in the app) |
@@ -81,10 +110,10 @@ src/
   features/
     auth/                 Sign-in, driver profile screen, splash controller
     deliveries/           List, details, status badge, data hooks
-    location/             Permission hook, tracking preference UI
+    location/             Permission hook, location preference UI
     navigation/           Route estimate, Google Maps directions link
   providers/              ServicesProvider (DI), AuthProvider (session + driver profile)
-  stores/                 Zustand: delivery selection, tracking preferences
+  stores/                 Zustand: delivery selection, location preferences
   services/
     auth/ deliveries/ drivers/ maps/ location/   Interfaces + real implementations
     mocks/                ⚠️ Mock implementations and fictional data (dev only)
@@ -92,7 +121,10 @@ src/
   lib/                    Supabase client, secure storage, errors, validation, formatting
   types/                  Domain types
   config/                 Env parsing and validation
+context/                  Project context files and unit specifications
 ```
+
+A `supabase/` folder (migrations, functions, seed data, backend tests) will be added by Unit 06 once its specification is approved.
 
 Rules:
 
@@ -100,9 +132,11 @@ Rules:
 - Auth state lives only in `AuthProvider`. Zustand holds client operational state and stores IDs, not copies of Supabase data.
 - Data from the server is validated at runtime by mappers (`*-mapper.ts`, `maps-parsers.ts`).
 
-## Backend contract (assumed, to be confirmed)
+## Backend contract
 
-The Supabase schema is a **placeholder**. Update the mappers when the real schema is known, and consider generating types with `supabase gen types typescript`.
+### Current (assumed placeholder)
+
+The app currently reads an **assumed** schema. No backend source exists in this repository yet.
 
 - `drivers`: `id, user_id (auth.users.id), full_name, phone, vehicle_registration, is_active`
 - `deliveries`: `id, driver_id, order_number, status, customer_name, customer_phone, address_line1, address_line2, suburb, city, postal_code, latitude, longitude, scheduled_for, notes, updated_at`
@@ -111,7 +145,11 @@ The Supabase schema is a **placeholder**. Update the mappers when the real schem
 
 **Row Level Security is required**: drivers may only read their own driver row and deliveries. The client-side route guards are UX only.
 
-### Google Maps proxy contract
+### Planned
+
+The proposed schema, access matrix, migrations and tests are in `context/specs/06-backend-schema-authorization.md` (awaiting review). It renames some columns and adds `pending_assignment`, attempts, assignment versions and custody; Unit 07 aligns the mappers. Do not point the app at the new schema before Unit 07.
+
+### Google Maps proxy contract (current)
 
 The Edge Function named by `EXPO_PUBLIC_GOOGLE_MAPS_FUNCTION` (default `google-maps`) receives `{ action, ...payload }` and keeps the Google API key as a function secret:
 
@@ -122,14 +160,11 @@ The Edge Function named by `EXPO_PUBLIC_GOOGLE_MAPS_FUNCTION` (default `google-m
 | `placesAutocomplete` | `input, sessionToken, near?`      | `{ suggestions: [{ placeId, primaryText, secondaryText }] }`                                 |
 | `placeDetails`       | `placeId, sessionToken`           | `{ placeId, formattedAddress, location: { latitude, longitude } }`                           |
 
-The function is not part of this repo. It must verify the caller's JWT before calling Google.
+The function does not exist yet. It must verify the caller's JWT before calling Google. The approved plan (Unit 14) narrows this contract: the function will accept delivery IDs and derive destinations server-side, and Places search is deferred.
 
 ## Security notes
 
 - Every `EXPO_PUBLIC_*` value is bundled into the app. Only the Supabase URL and publishable (anon) key belong there.
 - Never put the Supabase secret/service-role key or the Google Maps key in `.env` or `eas.json`.
 - `.env` and `.env.*` (except `.env.example`) are gitignored.
-
-## Not yet implemented
-
-Background location and live location sharing, delivery status updates in the UI (the repository supports them), maps rendering, proof of delivery, push notifications, offline caching and Eskort branding.
+- Use synthetic data only until a responsible-party representative approves real driver or customer data (POPIA review). Passing tests is not privacy approval.

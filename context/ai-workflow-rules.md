@@ -45,7 +45,6 @@ Do not modify the following unless explicitly instructed:
 - `ios/` and `android/` — never create or edit (Continuous Native Generation).
 - `node_modules/` and `package-lock.json` by hand (change dependencies only through `npx expo install` or `npm`).
 - `AGENTS.md`, `LICENSE`, `.claude/`, `.vscode/`.
-- `context/README.md` — the methodology guide.
 - `src/components/ui/theme.ts` colour and typography values — change only for approved brand tokens or a recorded accessibility fix.
 - `src/config/env.ts` validation rules — never loosen secret, placeholder or production-mock checks.
 - `eas.json` profiles, `app.json` identifiers (`bundleIdentifier`, `package`) and `extra.eas` — change only on instruction.
